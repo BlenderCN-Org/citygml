@@ -6,6 +6,7 @@ import os
 import sys
 import glob
 from xml.dom import minidom
+import pyproj
 import ez.lib.ezShapefile as shapefile
 
 
@@ -18,7 +19,13 @@ elif frozen in ('dll', 'console_exe', 'windows_exe'):
     executable = sys.executable
 
 
-PRJ_STRING = b'''PROJCS["SVY21",GEOGCS["SVY21[WGS84]",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",28001.642],PARAMETER["False_Northing",38744.572],PARAMETER["Central_Meridian",103.8333333333333],PARAMETER["Scale_Factor",1.0],PARAMETER["Latitude_Of_Origin",1.366666666666667],UNIT["Meter",1.0]]'''
+PRJ_STRING = b'''GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433],AUTHORITY["EPSG",4326]]'''
+
+
+def project_coordinate(epsg, x, y):
+    p = pyproj.Proj(init=epsg)
+    lat, lon = p(x, y, inverse=True)
+    return lat, lon
 
 
 def write_prjfile(fn_prj, prj_string):
@@ -41,7 +48,8 @@ def building_to_shapefile(fn_citygml, fn_shapefile):
                 if pos:
                     x,y,z = pos.split()
                     x,y,z = float(x), float(y), float(z)
-                    coords.append((x,y,z,0))
+                    lat, lon = project_coordinate("EPSG:3414", x, y)
+                    coords.append((lat, lon, z, 0))
             wr.shapePolygonZ([coords])
             wr.record((1,))
     wr.close()
@@ -61,8 +69,9 @@ def address_to_shapefile(fn_citygml, fn_shapefile):
             coords = []
             x,y,z = node_pos.childNodes[0].nodeValue.split()
             x,y,z = float(x), float(y), float(z)
+            lat, lon = project_coordinate("EPSG:3414", x, y)
             #print(x,y,z)
-            wr.shapePolylineZ([[(x,y,z-10,0),(x,y,z+100,0)]])
+            wr.shapePolylineZ([[(lat, lon, z-10, 0),(lat, lon, z+100, 0)]])
             wr.record((1,))
     wr.close()
 
