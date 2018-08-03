@@ -8,7 +8,7 @@ import glob
 from xml.dom import minidom
 import pyproj
 import ez.lib.ezShapefile as shapefile
-
+import citygml
 
 frozen = getattr(sys, 'frozen', '')
 if not frozen:
@@ -35,23 +35,13 @@ def write_prjfile(fn_prj, prj_string):
 
 def building_to_shapefile(fn_citygml, fn_shapefile):
     print(fn_citygml, fn_shapefile)
+    reader = citygml.Reader(fn_citygml)
     wr = shapefile.writer(fn_shapefile, shapefile.PolygonZ)
     wr.addField('ID')
-    with open(fn_citygml, 'rb') as f:
-        ls = f.read()
-        doc=minidom.parseString(ls)
-        #node_core = doc.getElementsByTagName('core:CityModel')[0]
-        node_building = doc.getElementsByTagName('bldg:Building')[0]
-        for node_posList in doc.getElementsByTagName('gml:posList'):
-            coords = []
-            for pos in node_posList.childNodes[0].nodeValue.splitlines():
-                if pos:
-                    x,y,z = pos.split()
-                    x,y,z = float(x), float(y), float(z)
-                    lat, lon = project_coordinate("EPSG:3414", x, y)
-                    coords.append((lat, lon, z, 0))
-            wr.shapePolygonZ([coords])
-            wr.record((1,))
+    for building in reader.get_buildings():
+        coords = [(c[0],c[1],c[2],0) for c in building]
+        wr.shapePolygonZ([coords])
+        wr.record((1,))
     wr.close()
 
     write_prjfile(fn_shapefile+'.prj', PRJ_STRING)
@@ -59,20 +49,15 @@ def building_to_shapefile(fn_citygml, fn_shapefile):
 
 def address_to_shapefile(fn_citygml, fn_shapefile):
     print(fn_citygml, fn_shapefile)
+    reader = citygml.Reader(fn_citygml)
     wr = shapefile.writer(fn_shapefile, shapefile.PolyLineZ)
     wr.addField('ID')
-    with open(fn_citygml, 'rb') as f:
-        ls = f.read()
-        doc=minidom.parseString(ls)
-        #node_core = doc.getElementsByTagName('core:CityModel')[0]
-        for node_pos in doc.getElementsByTagName('gml:pos'):
-            coords = []
-            x,y,z = node_pos.childNodes[0].nodeValue.split()
-            x,y,z = float(x), float(y), float(z)
-            lat, lon = project_coordinate("EPSG:3414", x, y)
-            #print(x,y,z)
-            wr.shapePolylineZ([[(lat, lon, z-10, 0),(lat, lon, z+100, 0)]])
-            wr.record((1,))
+    for address in reader.get_addresses():
+        x,y,z = address
+        lat, lon = x,y
+        #print(x,y,z)
+        wr.shapePolylineZ([[(lat, lon, z-10, 0),(lat, lon, z+100, 0)]])
+        wr.record((1,))
     wr.close()
 
     write_prjfile(fn_shapefile+'.prj', PRJ_STRING)
