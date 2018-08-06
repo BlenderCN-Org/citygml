@@ -38,8 +38,8 @@ def building_to_shapefile(fn_citygml, fn_shapefile):
     reader = citygml.Reader(fn_citygml)
     wr = shapefile.writer(fn_shapefile, shapefile.PolygonZ)
     wr.addField('ID')
-    for building in reader.get_buildings():
-        coords = [(c[0],c[1],c[2],0) for c in building]
+    for ring_id, ring_coords in reader.get_buildings():
+        coords = [(c[0],c[1],c[2],0) for c in ring_coords]
         wr.shapePolygonZ([coords])
         wr.record((1,))
     wr.close()
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     except:
         pass
 
-    for fn_citygml in glob.glob(os.path.join(fd_citygml, '*.gml'))[:]:
+    for fn_citygml in glob.glob(os.path.join(fd_citygml, '*.gml'))[:1]:
         basename = os.path.basename(fn_citygml)
         basename = basename[:-4]
         fn_shapefile = os.path.join(fd_shapefile, basename)
