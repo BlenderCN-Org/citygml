@@ -22,6 +22,7 @@ class Reader():
         self._buildings = []
         self._addresses = []
         self._texture_coords = []
+        self._imageURI = ''
         self.parse(filename)
 
     def parse(self, filename):
@@ -35,12 +36,11 @@ class Reader():
 
 
     def _parse_appearance(self, root):
+        for node_imageURI in root.getElementsByTagName('app:imageURI'):
+            self._imageURI = node_imageURI.childNodes[0].nodeValue.strip()
         for node_textureCoordinates in root.getElementsByTagName('app:textureCoordinates'):
             ring_id = node_textureCoordinates.getAttribute("ring")[1:]
             texture_coords = []
-            #print(node_textureCoordinates)
-            #print(dir(node_textureCoordinates))
-            #print(node_textureCoordinates.nodeValue)
             pss = node_textureCoordinates.childNodes[0].nodeValue.strip().split()
             for i in range(len(pss)//2):
                 x = pss[i*2]
@@ -62,10 +62,10 @@ class Reader():
                 if pos:
                     x,y,z = pos.split()
                     x,y,z = float(x), float(y), float(z)
-                    #lat, lon = project_coordinate("EPSG:3414", x, y)
-                    lat, lon = x, y
-                    self._coords.append((lat, lon, z))
-                    building_coords.append((lat, lon, z))
+                    lon, lat = x, y
+                    lon, lat = project_coordinate("EPSG:3414", x, y)
+                    self._coords.append((lon, lat, z))
+                    building_coords.append((lon, lat, z))
             if building_coords:
                 self._buildings.append((linearRing_id, building_coords))
 
@@ -78,7 +78,6 @@ class Reader():
             self._addresses.append((lat, lon, z))
 
 
-
     def get_coords(self):
         return self._coords
 
@@ -88,6 +87,16 @@ class Reader():
     def get_addresses(self):
         return self._addresses
 
-    def get_texture_coords(self):
-        return self._texture_coords
+    def get_texture_coords(self, polygon_id=None):
+        if not polygon_id:
+            return self._texture_coords
+        else:
+            for target_id, texture_coords in self._texture_coords:
+                if target_id == polygon_id:
+                    return texture_coords
+            return None
+
+
+    def get_imageURI(self):
+        return self._imageURI
 
