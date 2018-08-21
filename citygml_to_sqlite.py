@@ -5,7 +5,6 @@
 import os
 import sys
 import glob
-from xml.dom import minidom
 import pyproj
 import citygml
 from ez.lib.ezSQLite import SQLite
@@ -20,22 +19,14 @@ elif frozen in ('dll', 'console_exe', 'windows_exe'):
     executable = sys.executable
 
 
-PRJ_STRING = b'''GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433],AUTHORITY["EPSG",4326]]'''
-
-
 def project_coordinate(epsg, x, y):
     p = pyproj.Proj(init=epsg)
     lat, lon = p(x, y, inverse=True)
     return lat, lon
 
 
-
-def building_to_sqlite(fn_citygml, fn_sqlite):
-    print(fn_citygml, fn_sqlite)
-
+def building_to_sqlite(fn_citygml, sq):
     reader = citygml.Reader(fn_citygml)
-
-    sq = SQLite(fn_sqlite)
 
     sq.dropTable('gml_polygon')
     sq.execute('''create table gml_polygon (
@@ -56,18 +47,11 @@ def building_to_sqlite(fn_citygml, fn_sqlite):
         for i, coord in enumerate(coords):
             rec = [gml_id, i]
             rec.extend(coord)
-            #print(rec)
             sq.insert('coordinates', rec)
 
-    sq.close()
 
-
-def texture_to_sqlite(fn_citygml, fn_sqlite):
-    print(fn_citygml, fn_sqlite)
-
+def texture_to_sqlite(fn_citygml, sq):
     reader = citygml.Reader(fn_citygml)
-
-    sq = SQLite(fn_sqlite)
 
     sq.dropTable('texture')
     sq.execute('''create table texture (
@@ -86,13 +70,9 @@ def texture_to_sqlite(fn_citygml, fn_sqlite):
         for i, coord in enumerate(coords):
             sq.insert('texture_coords', (gml_id, i, coord[0], coord[1]))
 
-    sq.close()
 
-
-def address_to_sqlite(fn_citygml, fn_sqlite):
-    print(fn_citygml, fn_sqlite)
+def address_to_sqlite(fn_citygml, sq):
     reader = citygml.Reader(fn_citygml)
-    sq = SQLite(fn_sqlite)
 
     sq.dropTable("addresses")
     sq.execute('''create table addresses (
@@ -103,6 +83,14 @@ def address_to_sqlite(fn_citygml, fn_sqlite):
     for address in reader.get_addresses():
         sq.insert('addresses', address)
 
+
+
+def convert(fn_citygml, fn_sqlite):
+    print(fn_citygml, fn_sqlite)
+    sq = SQLite(fn_sqlite)
+    building_to_sqlite(fn_citygml, sq)
+    address_to_sqlite(fn_citygml, sq)
+    texture_to_sqlite(fn_citygml, sq)
     sq.close()
 
 
@@ -127,6 +115,4 @@ if __name__ == '__main__':
         basename = os.path.basename(fn_citygml)
         basename = basename[:-4]
         fn_sqlite = os.path.join(fd_sqlite, basename)
-        building_to_sqlite(fn_citygml, fn_sqlite+'.sq3')
-        address_to_sqlite(fn_citygml, fn_sqlite+'.sq3')
-        texture_to_sqlite(fn_citygml, fn_sqlite+'.sq3')
+        convert(fn_citygml, fn_sqlite+'.sq3')

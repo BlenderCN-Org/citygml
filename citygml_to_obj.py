@@ -75,13 +75,10 @@ def building_to_obj(fn_citygml, fn_obj):
 
     for polygon_id, polygon_coords in reader.get_buildings():
         texture_coords = reader.get_texture_coords(polygon_id)
-        #print(polygon_id)
-        #print(polygon_id, texture_coords)
         if polygon_id and texture_coords:
             for x, y in texture_coords:
                 f_obj.write(("vt %.16f %.16f%s"%(x, y, os.linesep)).encode('utf8'))
         else:
-            #print(polygon_id, polygon_coords)
             for coord in polygon_coords:
                 f_obj.write(("vt 0 0%s"%os.linesep).encode('utf8'))
 
@@ -99,7 +96,7 @@ def building_to_obj(fn_citygml, fn_obj):
 
 
 def usage():
-	print('''Usage: %s <city gml folder> <output obj folder>'''%executable)
+    print('''Usage: %s <city gml folder> <output obj folder>'''%executable)
 
 
 if __name__ == '__main__':
